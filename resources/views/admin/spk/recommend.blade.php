@@ -22,7 +22,7 @@
                     </svg>
                     <span>Kembali</span>
                 </a>
-                <button type="button" onclick="eksekusiPrometheeEngine()" class="px-5 py-2.5 bg-[#195A36] hover:bg-[#124227] text-white rounded-full text-sm font-semibold transition shadow-sm flex items-center gap-2">
+                <button type="button" onclick="eksekusiPrometheeEngine()" class="px-5 py-2.5 bg-[#195A36] hover:bg-[#124227] text-white rounded-full text-sm font-semibold transition shadow-sm flex items-center gap-2 cursor-pointer">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
@@ -163,21 +163,21 @@
             <!-- KOLOM KANAN (8/12): TABBED NAVIGATION & HASIL SPK -->
             <div class="space-y-6 lg:col-span-8">
 
-                <!-- TABS HEADER (Pill Style Modern) -->
+                <!-- TABS HEADER -->
                 <div class="flex flex-wrap gap-2">
-                    <button @click="activeTab = 'summary'" :class="activeTab === 'summary' ? 'bg-[#195A36] text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 shadow-sm'" class="px-5 py-2.5 rounded-full text-sm font-semibold transition flex items-center gap-2">
+                    <button @click="activeTab = 'summary'" :class="activeTab === 'summary' ? 'bg-[#195A36] text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 shadow-sm'" class="px-5 py-2.5 rounded-full text-sm font-semibold transition flex items-center gap-2 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
                         </svg>
                         <span>Ringkasan & Ranking</span>
                     </button>
-                    <button @click="activeTab = 'matrix'" :class="activeTab === 'matrix' ? 'bg-[#195A36] text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 shadow-sm'" class="px-5 py-2.5 rounded-full text-sm font-semibold transition flex items-center gap-2">
+                    <button @click="activeTab = 'matrix'" :class="activeTab === 'matrix' ? 'bg-[#195A36] text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 shadow-sm'" class="px-5 py-2.5 rounded-full text-sm font-semibold transition flex items-center gap-2 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H4.5A1.125 1.125 0 003.375 5.625m18 0v1.5c0 .621-.504 1.125-1.125 1.125m-16.5-2.625h16.5" />
                         </svg>
                         <span>Matriks Keputusan</span>
                     </button>
-                    <button @click="activeTab = 'flows'" :class="activeTab === 'flows' ? 'bg-[#195A36] text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 shadow-sm'" class="px-5 py-2.5 rounded-full text-sm font-semibold transition flex items-center gap-2">
+                    <button @click="activeTab = 'flows'" :class="activeTab === 'flows' ? 'bg-[#195A36] text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 shadow-sm'" class="px-5 py-2.5 rounded-full text-sm font-semibold transition flex items-center gap-2 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V18zm2.498-6.75h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V13.5zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V18zm2.504-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zm0 2.25h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V18zm2.498-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zM8.25 6h7.5a1.5 1.5 0 011.5 1.5v3a1.5 1.5 0 01-1.5 1.5h-7.5A1.5 1.5 0 016 10.5v-3A1.5 1.5 0 018.25 6z" />
                         </svg>
@@ -229,7 +229,7 @@
                 <div x-show="activeTab === 'matrix'" class="p-6 bg-white border border-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] rounded-[24px]">
                     <div class="mb-5">
                         <h3 class="text-sm font-bold tracking-wide text-gray-900 uppercase">Matriks Evaluasi Alternatif</h3>
-                        <p class="mt-1 text-xs text-gray-500">Data kuantitatif riil dari setiap konsultan sebelum perbandingan berpasangan.</p>
+                        <p class="mt-1 text-xs text-gray-500">Data kualitatif dan kuantitatif riil dari setiap konsultan sebelum perbandingan berpasangan.</p>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -240,9 +240,9 @@
                                     <th class="pb-3 font-medium text-center">C1 (Spesialis)</th>
                                     <th class="pb-3 font-medium text-center">C2 (Pengalaman)</th>
                                     <th class="pb-3 font-medium text-center">C3 (Proyek)</th>
-                                    <th class="pb-3 font-medium text-center">C4 (Jarak KM)</th>
+                                    <th class="pb-3 font-medium text-center">C4 (Jarak Spasial)</th>
                                     <th class="pb-3 font-medium text-center">C5 (Performa)</th>
-                                    <th class="pb-3 font-medium text-center">C6 (Tersedia)</th>
+                                    <th class="pb-3 font-medium text-center">C6 (Jadwal)</th>
                                 </tr>
                             </thead>
                             <tbody id="matrix-table-body" class="text-gray-700 divide-y divide-gray-50">
@@ -373,7 +373,7 @@
 
     </div>
 
-    <!-- AJAX CORE ENGINE (Refactored Classes) -->
+    <!-- AJAX CORE ENGINE (AMUAN REFACTORED LENGKAP & AMAN) -->
     <script type="text/javascript">
         let currentRankingData = [];
 
@@ -389,14 +389,20 @@
             const heroBox = document.getElementById('hero-recommendation');
 
             fetch(`/admin/proyek/{{ $project->id }}/spk/hitung-ajax`)
-            .then(res => {
-                if (!res.ok) throw new Error("Gagal mengambil data dari server.");
-                return res.json();
+            .then(async res => {
+                const responseData = await res.json();
+                if (!res.ok) {
+                    throw new Error(responseData.message || "Gagal mengambil data dari server.");
+                }
+                return responseData;
             })
             .then(response => {
                 if (!response.success || response.data.length === 0) {
-                    chartBox.innerHTML = `<div class="py-6 font-semibold text-center text-rose-600">Butuh minimal 2 konsultan aktif untuk komputasi SPK.</div>`;
-                    tableBox.innerHTML = `<tr><td colspan="4" class="py-6 font-medium text-center text-rose-600">Tidak ada data konsultan.</td></tr>`;
+                    const emptyMsg = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-[16px] text-center">
+                        Butuh minimal 2 konsultan aktif untuk komputasi SPK.
+                    </div>`;
+                    chartBox.innerHTML = emptyMsg;
+                    tableBox.innerHTML = `<tr><td colspan="4" class="py-6 font-medium text-center text-rose-600">Tidak ada data konsultan aktif.</td></tr>`;
                     return;
                 }
 
@@ -413,7 +419,7 @@
                     openPlottingModal(topRank.consultant.id, topRank.consultant.nama, topRank.nilai_dinamis.jarak, topRank.net_flow, topRank.consultant.domisili);
                 };
 
-                // 2. RENDER CHART
+                // 2. RENDER CHART (TOP 5)
                 chartBox.innerHTML = '';
                 currentRankingData.slice(0, 5).forEach((item, index) => {
                     const nama = item.consultant.nama;
@@ -477,19 +483,25 @@
                     tableBox.appendChild(row);
                 });
 
-                // 4. RENDER TABEL MATRIKS KEPUTUSAN
+                // 4. RENDER TABEL MATRIKS KEPUTUSAN (SAFE FALLBACK PROPER TANDA BINTANG)
                 matrixBox.innerHTML = '';
                 currentRankingData.forEach(item => {
                     const row = document.createElement('tr');
                     row.className = "hover:bg-gray-50/50 transition";
                     row.innerHTML = `
                         <td class="px-3 py-4 font-semibold text-gray-900">${item.consultant.nama}</td>
-                        <td class="px-3 py-4 text-center"><span class="px-3 py-1 text-[11px] rounded-full font-semibold ${item.nilai_dinamis.spesialisasi === 'Cocok' ? 'bg-[#e8f3ec] text-[#195A36]' : 'bg-gray-100 text-gray-500'}">${item.nilai_dinamis.spesialisasi}</span></td>
-                        <td class="px-3 py-4 font-mono font-semibold text-center">${item.consultant.pengalaman_tahun} Thn</td>
-                        <td class="px-3 py-4 font-mono font-semibold text-center">${item.consultant.total_proyek}</td>
+                        <td class="px-3 py-4 text-center">
+                            <span class="px-3 py-1 text-[11px] rounded-full font-semibold ${item.nilai_dinamis.spesialisasi === 'Cocok' ? 'bg-[#e8f3ec] text-[#195A36]' : 'bg-gray-100 text-gray-500'}">
+                                ${item.nilai_dinamis.spesialisasi}
+                            </span>
+                        </td>
+                        <td class="px-3 py-4 font-mono font-semibold text-center text-gray-700">${item.consultant.spesialisasi ?? 'Umum'}</td>
+                        <td class="px-3 py-4 font-mono font-semibold text-center text-gray-700">${item.consultant.sertifikasi_no ?? '-'}</td>
                         <td class="px-3 py-4 text-center font-bold text-[#195A36] font-mono">${item.nilai_dinamis.jarak} KM</td>
-                        <td class="px-3 py-4 font-mono font-semibold text-center">${item.consultant.rating_performa}</td>
-                        <td class="px-3 py-4 font-mono font-semibold text-center">${item.consultant.ketersediaan}</td>
+                        <td class="px-3 py-4 font-mono font-semibold text-center text-gray-700">${item.consultant.domisili ?? '-'}</td>
+                        <td class="px-3 py-4 font-mono font-semibold text-center">
+                            <span class="px-2.5 py-1 text-[10px] rounded-full font-bold bg-[#e8f3ec] text-[#195A36]">Tersedia</span>
+                        </td>
                     `;
                     matrixBox.appendChild(row);
                 });
@@ -510,7 +522,14 @@
 
             })
             .catch(err => {
-                chartBox.innerHTML = `<div class="py-6 font-bold text-center text-rose-600">Gagal memuat komputasi SPK.</div>`;
+                const errorAlert = `<div class="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold rounded-[20px] space-y-1">
+                    <p class="font-bold">Gagal Menghitung SPK:</p>
+                    <p>${err.message}</p>
+                </div>`;
+                chartBox.innerHTML = errorAlert;
+                tableBox.innerHTML = `<tr><td colspan="4" class="py-6 font-medium text-center text-rose-600">${err.message}</td></tr>`;
+                matrixBox.innerHTML = `<tr><td colspan="7" class="py-6 font-medium text-center text-rose-600">${err.message}</td></tr>`;
+                flowsBox.innerHTML = `<tr><td colspan="4" class="py-6 font-medium text-center text-rose-600">${err.message}</td></tr>`;
             });
         }
 

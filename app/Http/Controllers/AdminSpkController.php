@@ -9,6 +9,7 @@ use App\Services\PrometheeService;
 use App\Enums\ProjectStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class AdminSpkController extends Controller
 {
@@ -29,17 +30,29 @@ class AdminSpkController extends Controller
     /**
      * Menampilkan halaman proses komputasi PROMETHEE II untuk proyek tertentu.
      */
-    public function tampilkanRekomendasi($id)
+    public function tampilkanRekomendasi($id, PrometheeService $prometheeService)
     {
         $project = Project::with(['klien.companyProfile'])->findOrFail($id);
         $criterias = Criteria::orderBy('kode', 'asc')->get();
-        $consultants = Consultant::where('is_active', 1)->get();
+        $consultants = Consultant::where('is_active', true)->get();
 
-        return view('admin.spk.recommend', compact('project', 'criterias', 'consultants'));
+        $ranking = [];
+        $errorMessage = null;
+
+        // SSR Computation: Jalankan kalkulasi SPK saat halaman pertama kali dimuat
+        try {
+            $ranking = $prometheeService->hitungRekomendasi($project);
+        } catch (InvalidArgumentException $e) {
+            $errorMessage = $e->getMessage();
+        } catch (\Exception $e) {
+            $errorMessage = 'Gagal melakukan kalkulasi SPK: ' . $e->getMessage();
+        }
+
+        return view('admin.spk.recommend', compact('project', 'criterias', 'consultants', 'ranking', 'errorMessage'));
     }
 
     /**
-     * Endpoint AJAX untuk mengeksekusi perhitungan PROMETHEE II.
+     * Endpoint AJAX untuk mengeksekusi perhitungan PROMETHEE II secara dinamis.
      */
     public function hitungSpkAjax($id, PrometheeService $prometheeService)
     {
@@ -53,10 +66,19 @@ class AdminSpkController extends Controller
                 'success' => true,
                 'data'    => $ranking
             ], 200);
-        } catch (\Exception $e) {
+
+        } catch (InvalidArgumentException $e) {
+            // Error Validasi Data Input (Contoh: Koordinat GPS belum terisi)
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menghitung SPK: ' . $e->getMessage()
+                'message' => $e->getMessage()
+            ], 422);
+
+        } catch (\Exception $e) {
+            // General Server Error
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem saat menghitung SPK: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -68,6 +90,9 @@ class AdminSpkController extends Controller
     {
         $request->validate([
             'consultant_id' => 'required|exists:consultants,id'
+        ], [
+            'consultant_id.required' => 'Pilih salah satu konsultan terlebih dahulu.',
+            'consultant_id.exists'   => 'Konsultan yang dipilih tidak terdaftar.',
         ]);
 
         $project = Project::findOrFail($id);
@@ -82,7 +107,7 @@ class AdminSpkController extends Controller
 
             DB::commit();
             return redirect()->route('admin.spk.index')
-                ->with('success', 'Konsultan berhasil diplotting untuk proyek ' . $project->nama_merek_dagang);
+                ->with('success', 'Konsultan berhasil ditunjuk dan diplotting untuk proyek ' . $project->nama_merek_dagang);
 
         } catch (\Exception $e) {
             DB::rollBack();

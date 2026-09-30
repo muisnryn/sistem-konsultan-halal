@@ -4,41 +4,59 @@ namespace App\Services;
 
 use App\Models\Criteria;
 use App\Models\Consultant;
+use InvalidArgumentException;
 
+/**
+ * Service Engine SPK PROMETHEE II Terintegrasi Rumus Spasial Haversine
+ * Dibuat untuk Analisis Pemilihan Konsultan Pendamping Sertifikasi Halal
+ */
 class PrometheeService
 {
     /**
      * Menghitung Perankingan SPK PROMETHEE II Terintegrasi Rumus Spasial Haversine
+     *
+     * @param object $project Data proyek pengajuan dari Klien
+     * @return array Matrix ranking konsultan terurut berdasarkan Net Flow (Phi)
+     * @throws InvalidArgumentException Jika koordinat GPS Klien/Konsultan tidak terdefinisi
      */
     public function hitungRekomendasi($project)
     {
         $kriterias = Criteria::all();
         $consultants = Consultant::with('evaluations')->where('is_active', true)->get();
 
-        // Guard: PROMETHEE II membutuhkan minimal 2 alternatif untuk perbandingan berpasangan
+        // Syarat minimal komputasi PROMETHEE II adalah 2 alternatif
         if ($consultants->count() < 2) {
             return [];
         }
 
-        // Hitung total bobot kriteria untuk normalisasi matematis
         $totalBobot = $kriterias->sum('bobot') ?: 1.0;
 
-        // Ambil Kategori Produk dari Profile Perusahaan Klien (Kolom: jenis_kelompok_usaha)
+        // Validasi Strict: Ambil dan Validasi Koordinat Klien
+        $latKlien = $project->latitude ?? $project->klien?->companyProfile?->latitude;
+        $lonKlien = $project->longitude ?? $project->klien?->companyProfile?->longitude;
+
+        if (is_null($latKlien) || is_null($lonKlien)) {
+            throw new InvalidArgumentException("Koordinat lokasi Klien belum diisi. Harap tentukan titik lokasi pada profil perusahaan.");
+        }
+
         $kategoriProdukProject = $project->klien?->companyProfile?->jenis_kelompok_usaha ?? '';
 
-        // 1. Matriks Keputusan Dinamis
+        // 1. Matriks Keputusan Dinamis (Alternative Evaluation Matrix)
         $matriks = [];
         foreach ($consultants as $c) {
-            foreach ($kriterias as $crit) {
+            // Validasi Strict: Validasi Koordinat Konsultan
+            if (is_null($c->latitude) || is_null($c->longitude)) {
+                throw new InvalidArgumentException("Koordinat domisili Konsultan {$c->nama_konsultan} belum diisi.");
+            }
 
+            foreach ($kriterias as $crit) {
                 if ($crit->kode === 'C1') {
-                    // C1: Spesialisasi Industri (Cocok = 1.0, Tidak Cocok = 0.0)
+                    // C1: Kualitatif - Matching Spesialisasi Industri
                     $spec = trim(strtolower($c->spesialisasi_industri ?? ''));
 
                     $companyProfile = $project->klien?->companyProfile;
                     $rawJenis = trim($companyProfile?->jenis_kelompok_usaha ?? '');
-                    
-                    // Jika Klien memilih 'Lainnya', gunakan nilai dari jenis_kelompok_usaha_lainnya
+
                     if (strtolower($rawJenis) === 'lainnya' && !empty($companyProfile?->jenis_kelompok_usaha_lainnya)) {
                         $kategoriProdukProject = trim($companyProfile->jenis_kelompok_usaha_lainnya);
                     } else {
@@ -47,28 +65,19 @@ class PrometheeService
 
                     $kategoriClean = trim(strtolower($kategoriProdukProject));
 
-                    // Pencocokan Persis atau Partial Match
                     $isMatch = (!empty($spec) && !empty($kategoriClean) && ($spec === $kategoriClean || str_contains($spec, $kategoriClean) || str_contains($kategoriClean, $spec)));
 
                     $matriks[$c->id][$crit->id] = $isMatch ? 1.0 : 0.0;
 
                 } elseif ($crit->kode === 'C4') {
-                    // C4: Jarak Geografis Lokasi Audit (Formula Haversine)
-                    // Failsafe koordinat Klien: Project -> CompanyProfile -> Default
-                    $latKlien = $project->latitude
-                        ?? $project->klien?->companyProfile?->latitude
-                        ?? -6.9024812;
-                    $lonKlien = $project->longitude
-                        ?? $project->klien?->companyProfile?->longitude
-                        ?? 107.6187889;
-
+                    // C4: Kuantitatif Spasial - Jarak Geografis Lokasi Audit (Formula Haversine Murni dalam KM)
                     $matriks[$c->id][$crit->id] = $this->hitungJarakHaversine(
                         $latKlien, $lonKlien,
-                        $c->latitude ?? -6.9024812, $c->longitude ?? 107.6187889
+                        $c->latitude, $c->longitude
                     );
 
                 } else {
-                    // C2, C3, C5, C6: Diambil dari histori evaluasi konsultan (Tabel consultant_evaluations)
+                    // C2, C3, C5, C6: Evaluasi Historis / Kuantitatif
                     $eval = $c->evaluations->where('criteria_id', $crit->id)->first();
                     $matriks[$c->id][$crit->id] = $eval ? (float) $eval->nilai : 0.0;
                 }
@@ -84,7 +93,7 @@ class PrometheeService
             $enteringFlow[$c->id] = 0.0;
         }
 
-        // 2. Perbandingan Berpasangan (Pairwise Comparison)
+        // 2. Perbandingan Berpasangan (Pairwise Comparison) & Indeks Preferensi Global (Pi)
         foreach ($consultants as $a) {
             foreach ($consultants as $b) {
                 if ($a->id === $b->id) continue;
@@ -95,14 +104,13 @@ class PrometheeService
                     $nilaiA = $matriks[$a->id][$crit->id];
                     $nilaiB = $matriks[$b->id][$crit->id];
 
-                    // Hitung selisih (d)
+                    // Penentuan Deviasi berdasarkan Tren Kriteria (Benefit / Cost)
                     $d = ($crit->tren === 'max') ? ($nilaiA - $nilaiB) : ($nilaiB - $nilaiA);
                     $p = $this->hitungFungsiPreferensi($d, $crit);
 
                     $indeksPreferensiMultikriteria += ($p * $crit->bobot);
                 }
 
-                // Normalisasi Matematis terhadap total bobot
                 $piNormalized = $indeksPreferensiMultikriteria / $totalBobot;
 
                 $leavingFlow[$a->id] += $piNormalized;
@@ -110,16 +118,15 @@ class PrometheeService
             }
         }
 
-        // Ambil kriteria C1 & C4 secara aman
         $c1 = $kriterias->firstWhere('kode', 'C1');
         $c4 = $kriterias->firstWhere('kode', 'C4');
 
-        // 3. Kalkulasi Aliran Flow PROMETHEE II & Output Formatting
+        // 3. Kalkulasi Aliran Flow PROMETHEE II (Leaving, Entering, Net Flow)
         $hasilRanking = [];
         foreach ($consultants as $c) {
-            $lf = $leavingFlow[$c->id] / ($n - 1);
-            $ef = $enteringFlow[$c->id] / ($n - 1);
-            $nf = $lf - $ef; // Rentang Net Flow [-1.0 s.d +1.0]
+            $lf = $leavingFlow[$c->id] / ($n - 1); // Phi+
+            $ef = $enteringFlow[$c->id] / ($n - 1); // Phi-
+            $nf = $lf - $ef;                       // Net Flow (Phi)
 
             $hasilRanking[] = [
                 'consultant' => [
@@ -128,10 +135,6 @@ class PrometheeService
                     'sertifikasi_no'   => $c->sertifikasi_no,
                     'domisili'         => $c->domisili ?? 'Lokal',
                     'spesialisasi'     => $c->spesialisasi_industri ?? 'Umum',
-                    'pengalaman_tahun' => 3, // Default nilai matriks jika belum ada evaluasi
-                    'total_proyek'     => 1,
-                    'rating_performa'  => 8.5,
-                    'ketersediaan'     => 'Tinggi',
                 ],
                 'leaving_flow'  => round($lf, 4),
                 'entering_flow' => round($ef, 4),
@@ -143,7 +146,7 @@ class PrometheeService
             ];
         }
 
-        // 4. Urutkan berdasarkan Net Flow Tertinggi
+        // 4. Urutkan Alternatif Berdasarkan Nilai Net Flow (Phi) Tertinggi
         usort($hasilRanking, function ($a, $b) {
             return $b['net_flow'] <=> $a['net_flow'];
         });
@@ -152,11 +155,11 @@ class PrometheeService
     }
 
     /**
-     * Implementasi Rumus Spasial Haversine (Jarak Geografis dalam KM)
+     * Implementasi Rumus Spasial Haversine (Menghitung Jarak Geografis dalam Satuan KM)
      */
     private function hitungJarakHaversine($lat1, $lon1, $lat2, $lon2)
     {
-        $earthRadius = 6371; // Jari-jari bumi (KM)
+        $earthRadius = 6371; // Jari-jari bumi dalam kilometer
 
         $radLat1 = deg2rad((float)$lat1);
         $radLon1 = deg2rad((float)$lon1);
@@ -173,7 +176,7 @@ class PrometheeService
     }
 
     /**
-     * Eksekutor 6 Tipe Preferensi PROMETHEE dengan Division By Zero Guard
+     * Eksekutor 6 Tipe Fungsi Preferensi PROMETHEE (Brans & Mareschal)
      */
     private function hitungFungsiPreferensi($d, $crit)
     {

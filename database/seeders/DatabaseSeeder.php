@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 3. Akun Klien
+        // 3. Akun Klien Utama (Lokasi: Cianjur)
         $klien = User::updateOrCreate(
             ['email' => 'klien@halal.com'],
             [
@@ -41,7 +41,6 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Profil Perusahaan Klien (Lokasi: Bandung)
         CompanyProfile::updateOrCreate(
             ['user_id' => $klien->id],
             [
@@ -51,17 +50,17 @@ class DatabaseSeeder extends Seeder
                 'pic_nama'             => 'Adelia Putri',
                 'pic_email'            => 'klien@kateringhalal.com',
                 'pic_phone'            => '085722288968',
-                'latitude'             => -6.914744,
-                'longitude'            => 107.609810,
+                'latitude'             => -6.806885, // Cianjur
+                'longitude'            => 107.142338, // Cianjur
             ]
         );
 
-        // 4. Panggil Seeder Master SPK & Proyek
+        // 4. Urutan Pemanggilan Seeder yang Benar
         $this->call([
             CriteriaSeeder::class,
+            ServiceTypeSeeder::class,
             ConsultantSeeder::class,
             ProjectSeeder::class,
-            ServiceTypeSeeder::class,
         ]);
     }
 }

@@ -52,7 +52,7 @@ class ProjectSeeder extends Seeder
         // =========================================================================
         $d1 = Carbon::now()->subDays(10);
         $klien1 = User::updateOrCreate(
-            ['email' => 'klien1@halal.com'],
+            ['email' => 'test@halal.com'],
             ['name' => 'Adelia Putri', 'password' => Hash::make('password'), 'role' => 'klien', 'created_at' => $d1]
         );
         CompanyProfile::updateOrCreate(
@@ -64,30 +64,30 @@ class ProjectSeeder extends Seeder
                 'pic_nama'             => 'Adelia Putri',
                 'pic_email'            => 'klien1@halal.com',
                 'pic_phone'            => '085722288968',
-                'latitude'             => -6.914744,
-                'longitude'            => 107.609810, // Bandung
+                'latitude'             => -6.806885, // Cianjur
+                'longitude'            => 107.142338, // Cianjur
                 'created_at'           => $d1,
             ]
         );
         $p1 = Project::updateOrCreate(
-            ['nama_merek_dagang' => 'Dapur Halal Nusantara'],
-            [
-                'klien_id'                => $klien1->id,
-                'konsultan_id'             => null,
-                'nama_paket'              => 'Paket Pendampingan Reguler',
-                'jenis_pengajuan'         => JenisPengajuan::BARU,
-                'jumlah_produk'           => 12,
-                'jumlah_outlet'           => 1,
-                'is_luar_jabodetabek'     => false,
-                'status_proyek'           => ProjectStatus::PAYMENT_T1_VERIFIED,
-                'total_harga_kesepakatan' => 15000000.00,
-                'file_dokumen_penawaran'  => 'documents/penawaran/sample_penawaran.pdf',
-                'latitude'                => -6.914744,
-                'longitude'               => 107.609810,
-                'created_at'              => $d1,
-                'updated_at'              => Carbon::now()->subDays(8),
-            ]
-        );
+        ['nama_merek_dagang' => 'Dapur Halal Nusantara'],
+        [
+            'klien_id'                => $klien1->id,
+            'konsultan_id'             => null,
+            'nama_paket'              => 'Paket Pendampingan Reguler',
+            'jenis_pengajuan'         => JenisPengajuan::BARU,
+            'jumlah_produk'           => 12,
+            'jumlah_outlet'           => 1,
+            'is_luar_jabodetabek'     => false,
+            'status_proyek'           => ProjectStatus::PAYMENT_T1_VERIFIED,
+            'total_harga_kesepakatan' => 15000000.00,
+            'file_dokumen_penawaran'  => 'documents/penawaran/sample_penawaran.pdf',
+            'latitude'                => -6.806885, // Cianjur
+            'longitude'               => 107.142338, // Cianjur
+            'created_at'              => $d1,
+            'updated_at'              => Carbon::now()->subDays(8),
+        ]
+    );
         Payment::updateOrCreate(
             ['project_id' => $p1->id, 'termin' => 'T1_60'],
             [

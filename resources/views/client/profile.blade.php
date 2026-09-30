@@ -4,13 +4,14 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     @php
-        // Kalkulasi Persentase Kelengkapan Profil secara Dinamis
+        // Kalkulasi Persentase Kelengkapan Profil secara Dinamis (Termasuk Koordinat GPS)
         $fields = [
             'nama_perusahaan', 'pimpinan_perusahaan', 'alamat_perusahaan',
             'nama_fasilitas_produksi', 'alamat_fasilitas_produksi', 'kota_pabrik',
             'skala_perusahaan', 'status_pabrik', 'jumlah_karyawan',
             'jenis_kelompok_usaha', 'pic_nama', 'pic_jabatan',
-            'pic_phone', 'pic_email', 'file_nib', 'file_npwp'
+            'pic_phone', 'pic_email', 'file_nib', 'file_npwp',
+            'latitude', 'longitude'
         ];
         $filledCount = 0;
         if ($profile) {
@@ -60,12 +61,10 @@
         <form action="{{ route('client.profile.update') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
-            <!-- GRID TATA LETAK UTAMA: 2 KOLOM (8/12 KIRI, 4/12 KANAN) -->
+            <!-- GRID TATA LETAK UTAMA -->
             <div class="grid items-start grid-cols-1 gap-6 lg:grid-cols-12">
 
-                <!-- ========================================================================= -->
-                <!-- KOLOM KIRI (MAIN FORM INPUTS) - 8 KOLOM                                   -->
-                <!-- ========================================================================= -->
+                <!-- KOLOM KIRI (MAIN FORM INPUTS) - 8 KOLOM -->
                 <div class="space-y-6 lg:col-span-8">
 
                     @if ($errors->any())
@@ -202,14 +201,14 @@
 
                             <div>
                                 <label class="block mb-1 text-xs font-bold text-gray-700">Kota / Kabupaten Kedudukan Pabrik <span class="text-rose-500">*</span></label>
-                                <input type="text" name="kota_pabrik" value="{{ old('kota_pabrik', $profile->kota_pabrik ?? '') }}" class="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-full text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:ring-[#195A36] focus:border-[#195A36] transition" placeholder="Contoh: Jakarta Timur / Kota Bandung" required>
+                                <input type="text" name="kota_pabrik" value="{{ old('kota_pabrik', $profile->kota_pabrik ?? '') }}" class="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-full text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:ring-[#195A36] focus:border-[#195A36] transition" placeholder="Contoh: Cianjur / Kota Bandung" required>
                                 @error('kota_pabrik') <p class="text-rose-500 text-[10px] mt-1 font-medium">{{ $message }}</p> @enderror
                             </div>
 
                             <!-- PETA SPASIAL LEAFLET -->
                             <div class="pt-2 space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <label class="block text-xs font-bold text-gray-700">Titik GPS Lokasi Pabrik</label>
+                                    <label class="block text-xs font-bold text-gray-700">Titik GPS Lokasi Pabrik <span class="text-rose-500">*</span></label>
                                     <button type="button" onclick="detectCurrentLocation()" class="px-3 py-1 bg-[#e8f3ec] hover:bg-green-100 text-[#195A36] text-[10px] font-bold rounded-full transition flex items-center gap-1 cursor-pointer">
                                         <svg class="w-3 h-3 text-[#195A36]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
                                         <span>Deteksi GPS Saya</span>
@@ -219,11 +218,15 @@
                                 <div class="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-full text-[10px] text-gray-500 font-medium border border-gray-100">
                                     <span>Koordinat Terpasang:</span>
                                     <span id="location-status" class="font-mono font-bold text-[#195A36]">
-                                        {{ ($profile && $profile->latitude && $profile->longitude) ? $profile->latitude.', '.$profile->longitude : 'Default (Perlu Penyesuaian)' }}
+                                        {{ ($profile && $profile->latitude && $profile->longitude) ? $profile->latitude.', '.$profile->longitude : 'Belum Ditentukan (Geser Marker di Peta)' }}
                                     </span>
                                 </div>
-                                <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude', $profile->latitude ?? '-6.917464') }}">
-                                <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude', $profile->longitude ?? '107.619123') }}">
+                                <!-- Default ke Titik Cianjur jika belum diisi -->
+                                <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude', $profile->latitude ?? '-6.597803') }}">
+                                <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude', $profile->longitude ?? '106.799263') }}">
+
+                                @error('latitude') <p class="text-rose-500 text-[10px] mt-1 font-medium">{{ $message }}</p> @enderror
+                                @error('longitude') <p class="text-rose-500 text-[10px] mt-1 font-medium">{{ $message }}</p> @enderror
                             </div>
                         </div>
                     </div>
@@ -240,7 +243,7 @@
                         <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <!-- NIB UPLOAD -->
                             <div class="space-y-1.5">
-                                <label class="block text-xs font-bold text-gray-700">NIB (Nomor Induk Berusaha)</label>
+                                <label class="block text-xs font-bold text-gray-700">NIB (Nomor Induk Berusaha) <span class="text-rose-500">*</span></label>
                                 <input type="file" name="file_nib" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#e8f3ec] file:text-[#195A36] hover:file:bg-green-100 transition cursor-pointer">
                                 @if($profile && $profile->file_nib)
                                     <div class="flex items-center gap-1.5 pt-1 text-[10px] font-bold text-[#195A36]">
@@ -254,7 +257,7 @@
 
                             <!-- NPWP UPLOAD -->
                             <div class="space-y-1.5">
-                                <label class="block text-xs font-bold text-gray-700">NPWP Perusahaan</label>
+                                <label class="block text-xs font-bold text-gray-700">NPWP Perusahaan <span class="text-rose-500">*</span></label>
                                 <input type="file" name="file_npwp" accept="application/pdf" class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#e8f3ec] file:text-[#195A36] hover:file:bg-green-100 transition cursor-pointer">
                                 @if($profile && $profile->file_npwp)
                                     <div class="flex items-center gap-1.5 pt-1 text-[10px] font-bold text-[#195A36]">
@@ -321,19 +324,16 @@
 
                 </div>
 
-                <!-- ========================================================================= -->
-                <!-- KOLOM KANAN (SIDEBAR WIDGETS) - 4 KOLOM (STICKY SIDEBAR)                  -->
-                <!-- ========================================================================= -->
+                <!-- KOLOM KANAN (SIDEBAR WIDGETS) - 4 KOLOM -->
                 <div class="space-y-6 lg:col-span-4 lg:sticky lg:top-6">
 
-                    <!-- WIDGET 1: KELENGKAPAN PROFIL (PROGRESS CARD) -->
+                    <!-- WIDGET 1: KELENGKAPAN PROFIL -->
                     <div class="relative p-6 space-y-3 overflow-hidden text-white bg-[#195A36] rounded-[24px] shadow-sm">
                         <div class="relative z-10 flex items-center justify-between">
                             <span class="text-xs font-bold tracking-wider text-green-100 uppercase">Kelengkapan Profil</span>
                             <strong class="font-mono text-xl font-extrabold text-white">{{ $completionPercent }}%</strong>
                         </div>
 
-                        <!-- Progress Bar -->
                         <div class="relative z-10 w-full h-2.5 overflow-hidden rounded-full bg-[#124227]">
                             <div class="h-2.5 transition-all duration-500 bg-green-300 rounded-full" style="width: {{ $completionPercent }}%;"></div>
                         </div>
@@ -346,7 +346,6 @@
                             @endif
                         </p>
 
-                        <!-- Element Hiasan Background -->
                         <div class="absolute pointer-events-none -right-6 -bottom-6 text-white/10">
                             <svg class="w-36 h-36" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-3zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 9z"/></svg>
                         </div>
@@ -401,20 +400,19 @@
                                     <span>Titik GPS Pabrik</span>
                                 </div>
                                 <span class="text-[10px] font-bold {{ ($profile && $profile->latitude && $profile->longitude) ? 'text-[#195A36]' : 'text-gray-400' }}">
-                                    {{ ($profile && $profile->latitude && $profile->longitude) ? 'Terpasang' : 'Default' }}
+                                    {{ ($profile && $profile->latitude && $profile->longitude) ? 'Terpasang' : 'Belum' }}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- WIDGET 3: PANDUAN LANGKAH SELANJUTNYA -->
+                    <!-- WIDGET 3: PANDUAN TAHAPAN -->
                     <div class="bg-white rounded-[24px] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] border border-gray-100 p-6 space-y-4">
                         <h3 class="pb-3 text-xs font-bold tracking-wider text-gray-900 uppercase border-b border-gray-100">
                             Tahapan Sertifikasi Halal
                         </h3>
 
                         <div class="space-y-3.5 text-xs">
-                            <!-- Step 1 -->
                             <div class="flex items-start gap-3">
                                 <div class="w-6 h-6 rounded-full bg-[#195A36] text-white font-bold text-[11px] flex items-center justify-center shrink-0">
                                     1
@@ -425,7 +423,6 @@
                                 </div>
                             </div>
 
-                            <!-- Step 2 -->
                             <div class="flex items-start gap-3 opacity-60">
                                 <div class="w-6 h-6 rounded-full bg-gray-200 text-gray-600 font-bold text-[11px] flex items-center justify-center shrink-0">
                                     2
@@ -436,7 +433,6 @@
                                 </div>
                             </div>
 
-                            <!-- Step 3 -->
                             <div class="flex items-start gap-3 opacity-60">
                                 <div class="w-6 h-6 rounded-full bg-gray-200 text-gray-600 font-bold text-[11px] flex items-center justify-center shrink-0">
                                     3
@@ -449,7 +445,7 @@
                         </div>
                     </div>
 
-                    <!-- WIDGET 4: BANTUAN LAYANAN WA -->
+                    <!-- WIDGET 4: BANTUAN WA -->
                     <div class="bg-[#124227] text-white rounded-[24px] p-6 space-y-3 shadow-xs">
                         <div class="flex items-center gap-2">
                             <div class="flex items-center justify-center text-green-300 rounded-full w-7 h-7 bg-white/10 shrink-0">
@@ -473,11 +469,12 @@
 
     </div>
 
-    <!-- LOGIKA JAVASCRIPT LEAFLET & DYNAMIC INPUTS -->
+    <!-- LOGIKA JAVASCRIPT LEAFLET (TITIK AWAL CIANJUR) -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            let initialLat = parseFloat(document.getElementById('latitude').value) || -6.917464;
-            let initialLng = parseFloat(document.getElementById('longitude').value) || 107.619123;
+            // Default ke Koordinat Cianjur jika belum terisi
+            let initialLat = parseFloat(document.getElementById('latitude').value) || -6.806885;
+            let initialLng = parseFloat(document.getElementById('longitude').value) || 107.142338;
 
             const map = L.map('map').setView([initialLat, initialLng], 13);
 
