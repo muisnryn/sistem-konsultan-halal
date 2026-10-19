@@ -27,38 +27,40 @@ class PrometheeServiceTest extends TestCase
         $this->service = new PrometheeService();
     }
 
-    public function test_it_returns_ranked_consultants_for_valid_project(): void
+    public function test_pemeringkatan_dengan_3_konsultan_aktif(): void
     {
-        $this->seedSpkTestData();
+        $project = $this->createProject();
+        $experience = $this->createCriteria('C2', 'max', 'usual', 0.75);
+        $workload = $this->createCriteria('C3', 'min', 'usual', 0.25);
 
-        $project = Project::query()->first();
+        $best = $this->createConsultant('Best Consultant');
+        $middle = $this->createConsultant('Middle Consultant');
+        $other = $this->createConsultant('Other Consultant');
+        $this->evaluate($best, $experience, 10);
+        $this->evaluate($best, $workload, 1);
+        $this->evaluate($middle, $experience, 5);
+        $this->evaluate($middle, $workload, 1);
+        $this->evaluate($other, $experience, 1);
+        $this->evaluate($other, $workload, 3);
 
         $result = $this->service->hitungRekomendasi($project);
 
-        $this->assertIsArray($result);
-        $this->assertGreaterThanOrEqual(2, count($result));
-        $this->assertSame(
-            array_keys($result),
-            array_keys($result)
-        );
-
-        $this->assertNotEmpty($result[0]['consultant']['nama']);
-        $this->assertArrayHasKey('net_flow', $result[0]);
-        $this->assertArrayHasKey('leaving_flow', $result[0]);
-        $this->assertArrayHasKey('entering_flow', $result[0]);
-
-        $this->assertTrue($result[0]['net_flow'] >= $result[1]['net_flow']);
+        $this->assertSame(3, Consultant::query()->where('is_active', true)->count());
+        $this->assertCount(3, $result);
+        $this->assertSame('Best Consultant', $result[0]['consultant']['nama']);
+        $this->assertSame('Middle Consultant', $result[1]['consultant']['nama']);
+        $this->assertSame('Other Consultant', $result[2]['consultant']['nama']);
+        $this->assertGreaterThan($result[1]['net_flow'], $result[0]['net_flow']);
+        $this->assertGreaterThan($result[2]['net_flow'], $result[1]['net_flow']);
+        $this->assertGreaterThan(0, $result[0]['net_flow']);
+        $this->assertEquals(0.0, array_sum(array_column($result, 'net_flow')));
     }
 
-    public function test_it_throws_when_project_coordinates_are_missing(): void
+    public function test_klien_tanpa_ketersediaan_data_koordinat_lokasi(): void
     {
-        $this->seedSpkTestData();
-
-        $project = Project::query()->first();
-        $project->latitude = null;
-        $project->longitude = null;
-        $project->klien->companyProfile->latitude = null;
-        $project->klien->companyProfile->longitude = null;
+        $project = $this->createProject(withCompanyProfile: false, projectLatitude: null, projectLongitude: null);
+        $this->createConsultant('Consultant One');
+        $this->createConsultant('Consultant Two');
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Koordinat lokasi Klien belum diisi');
@@ -66,172 +68,93 @@ class PrometheeServiceTest extends TestCase
         $this->service->hitungRekomendasi($project);
     }
 
-    public function test_it_returns_empty_for_less_than_two_active_consultants(): void
+    public function test_jumlah_konsultan_aktif_kurang_dari_dua_menghasilkan_empty(): void
     {
-        $klien = User::create([
-            'name' => 'Klien Test',
-            'email' => 'klien@example.com',
-            'password' => bcrypt('secret'),
-            'role' => 'klien',
-        ]);
+        $project = $this->createProject();
+        $this->createConsultant('Active Consultant');
+        $this->createConsultant('Inactive Consultant', isActive: false);
 
-        CompanyProfile::create([
-            'user_id' => $klien->id,
-            'nama_perusahaan' => 'PT Test',
-            'jenis_kelompok_usaha' => 'Makanan dan Minuman',
-            'latitude' => -6.60000000,
-            'longitude' => 106.80000000,
-        ]);
-
-        $consultant = Consultant::create([
-            'nama_konsultan' => 'Solo Consultant',
-            'sertifikasi_no' => 'CERT-HALAL-010',
-            'domisili' => 'Bogor',
-            'spesialisasi_industri' => 'Makanan dan Minuman',
-            'latitude' => -6.59000000,
-            'longitude' => 106.79000000,
-            'is_active' => true,
-        ]);
-
-        $project = Project::create([
-            'klien_id' => $klien->id,
-            'nama_paket' => 'Paket Demo',
-            'jumlah_produk' => 10,
-            'jumlah_outlet' => 2,
-            'nama_merek_dagang' => 'Merek Demo',
-            'status_proyek' => ProjectStatus::PAYMENT_T1_VERIFIED->value,
-            'latitude' => -6.60000000,
-            'longitude' => 106.80000000,
-        ]);
-
-        $result = $this->service->hitungRekomendasi($project);
-
-        $this->assertSame([], $result);
+        $this->assertSame([], $this->service->hitungRekomendasi($project));
     }
 
-    protected function seedSpkTestData(): void
-    {
-        $klien = User::create([
-            'name' => 'Klien SPK',
-            'email' => 'klien-spk@example.com',
+    private function createProject(
+        bool $withCompanyProfile = true,
+        ?float $projectLatitude = -6.64,
+        ?float $projectLongitude = 106.83,
+        ?float $profileLatitude = -6.64,
+        ?float $profileLongitude = 106.83,
+        string $industry = 'Makanan dan Minuman'
+    ): Project {
+        $client = User::create([
+            'name' => 'Client Test',
+            'email' => 'client@example.com',
             'password' => bcrypt('secret'),
             'role' => 'klien',
         ]);
 
-        CompanyProfile::create([
-            'user_id' => $klien->id,
-            'nama_perusahaan' => 'PT Makanan Halal',
-            'jenis_kelompok_usaha' => 'Makanan dan Minuman',
-            'latitude' => -6.64000000,
-            'longitude' => 106.83000000,
-        ]);
+        if ($withCompanyProfile) {
+            CompanyProfile::create([
+                'user_id' => $client->id,
+                'nama_perusahaan' => 'PT Test',
+                'jenis_kelompok_usaha' => $industry,
+                'latitude' => $profileLatitude,
+                'longitude' => $profileLongitude,
+            ]);
+        }
 
-        $c1 = Criteria::create([
-            'kode' => 'C1',
-            'nama_kriteria' => 'Spesialisasi Industri',
-            'bobot' => 0.25,
-            'tren' => 'max',
-            'tipe_preferensi' => 'usual',
-        ]);
-        $c2 = Criteria::create([
-            'kode' => 'C2',
-            'nama_kriteria' => 'Pengalaman Kerja',
-            'bobot' => 0.20,
-            'tren' => 'max',
-            'tipe_preferensi' => 'v_shape',
-            'param_p' => 10.00,
-        ]);
-        $c3 = Criteria::create([
-            'kode' => 'C3',
-            'nama_kriteria' => 'Beban Kerja',
-            'bobot' => 0.15,
-            'tren' => 'min',
-            'tipe_preferensi' => 'u_shape',
-            'param_q' => 2.00,
-        ]);
-        $c4 = Criteria::create([
-            'kode' => 'C4',
-            'nama_kriteria' => 'Jarak Spasial',
-            'bobot' => 0.15,
-            'tren' => 'min',
-            'tipe_preferensi' => 'linear',
-            'param_q' => 10.00,
-            'param_p' => 100.00,
-        ]);
-        $c5 = Criteria::create([
-            'kode' => 'C5',
-            'nama_kriteria' => 'Rating',
-            'bobot' => 0.15,
-            'tren' => 'max',
-            'tipe_preferensi' => 'gaussian',
-            'param_s' => 5.00,
-        ]);
-        $c6 = Criteria::create([
-            'kode' => 'C6',
-            'nama_kriteria' => 'Ketersediaan Jadwal',
-            'bobot' => 0.10,
-            'tren' => 'max',
-            'tipe_preferensi' => 'usual',
-        ]);
-
-        $a1 = Consultant::create([
-            'nama_konsultan' => 'Prima Sukmana Resma',
-            'sertifikasi_no' => 'CERT-HALAL-001',
-            'no_hp' => '081234567891',
-            'domisili' => 'Kabupaten Bogor (Ciawi)',
-            'spesialisasi_industri' => 'Makanan dan Minuman',
-            'latitude' => -6.64500000,
-            'longitude' => 106.83500000,
-            'is_active' => true,
-        ]);
-
-        $a2 = Consultant::create([
-            'nama_konsultan' => 'Tubagus Ishak',
-            'sertifikasi_no' => 'CERT-HALAL-002',
-            'no_hp' => '081234567892',
-            'domisili' => 'Bogor Kota (Tengah)',
-            'spesialisasi_industri' => 'Jasa Penyedia Makanan & Minuman',
-            'latitude' => -6.59710000,
-            'longitude' => 106.79490000,
-            'is_active' => true,
-        ]);
-
-        $a3 = Consultant::create([
-            'nama_konsultan' => 'Siti Aisyah',
-            'sertifikasi_no' => 'CERT-HALAL-003',
-            'no_hp' => '081234567893',
-            'domisili' => 'Bogor Kota (Utara)',
-            'spesialisasi_industri' => 'Makanan dan Minuman',
-            'latitude' => -6.52000000,
-            'longitude' => 106.72000000,
-            'is_active' => true,
-        ]);
-
-        ConsultantEvaluation::create(['consultant_id' => $a1->id, 'criteria_id' => $c2->id, 'nilai' => 12.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a1->id, 'criteria_id' => $c3->id, 'nilai' => 2.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a1->id, 'criteria_id' => $c5->id, 'nilai' => 88.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a1->id, 'criteria_id' => $c6->id, 'nilai' => 1.0]);
-
-        ConsultantEvaluation::create(['consultant_id' => $a2->id, 'criteria_id' => $c2->id, 'nilai' => 15.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a2->id, 'criteria_id' => $c3->id, 'nilai' => 1.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a2->id, 'criteria_id' => $c5->id, 'nilai' => 92.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a2->id, 'criteria_id' => $c6->id, 'nilai' => 1.0]);
-
-        ConsultantEvaluation::create(['consultant_id' => $a3->id, 'criteria_id' => $c2->id, 'nilai' => 5.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a3->id, 'criteria_id' => $c3->id, 'nilai' => 6.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a3->id, 'criteria_id' => $c5->id, 'nilai' => 80.0]);
-        ConsultantEvaluation::create(['consultant_id' => $a3->id, 'criteria_id' => $c6->id, 'nilai' => 0.0]);
-
-        Project::create([
-            'klien_id' => $klien->id,
-            'nama_paket' => 'Paket Demo',
+        return Project::create([
+            'klien_id' => $client->id,
+            'nama_paket' => 'Paket Test',
             'jenis_pengajuan' => JenisPengajuan::BARU->value,
-            'jumlah_produk' => 10,
-            'jumlah_outlet' => 3,
-            'nama_merek_dagang' => 'Merek Demo',
+            'jumlah_produk' => 1,
+            'jumlah_outlet' => 1,
+            'nama_merek_dagang' => 'Merek Test',
             'status_proyek' => ProjectStatus::PAYMENT_T1_VERIFIED->value,
-            'latitude' => -6.64000000,
-            'longitude' => 106.83000000,
+            'latitude' => $projectLatitude,
+            'longitude' => $projectLongitude,
+        ]);
+    }
+
+    private function createCriteria(
+        string $code,
+        string $trend,
+        string $preference,
+        float $weight = 1,
+        array $parameters = []
+    ): Criteria {
+        return Criteria::create(array_merge([
+            'kode' => $code,
+            'nama_kriteria' => $code,
+            'bobot' => $weight,
+            'tren' => $trend,
+            'tipe_preferensi' => $preference,
+        ], $parameters));
+    }
+
+    private function createConsultant(
+        string $name,
+        bool $isActive = true,
+        string $specialization = 'Makanan dan Minuman',
+        float $latitude = -6.645,
+        float $longitude = 106.835
+    ): Consultant {
+        return Consultant::create([
+            'nama_konsultan' => $name,
+            'sertifikasi_no' => strtoupper(str_replace(' ', '-', $name)) . '-CERT',
+            'domisili' => 'Bogor',
+            'spesialisasi_industri' => $specialization,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'is_active' => $isActive,
+        ]);
+    }
+
+    private function evaluate(Consultant $consultant, Criteria $criteria, float $value): void
+    {
+        ConsultantEvaluation::create([
+            'consultant_id' => $consultant->id,
+            'criteria_id' => $criteria->id,
+            'nilai' => $value,
         ]);
     }
 }
